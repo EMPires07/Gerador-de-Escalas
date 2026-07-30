@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Escalas Inteligente</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        h1, h2, h3 {
+            color: #0f172a;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        select, input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+
+        button.btn-secundary {
+            background-color: #64748b;
+        }
+
+        button.btn-secundary:hover {
+            background-color: #475569;
+        }
+
+        button.btn-link {
+            background: none;
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: underline;
+            width: auto;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+
+        button.btn-link:hover {
+            background: none;
+            color: #1d4ed8;
+        }
+
+        .escalado-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: #f1f5f9;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+
+        .cargo-title {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .tela {
+            display: none;
+        }
+
+        .tela.ativa {
+            display: block;
+        }
+
+        .subtitulo {
+            font-size: 0.85em;
+            color: #64748b;
+            margin-top: -8px;
+            margin-bottom: 15px;
+        }
+
+        .nota-comentarista {
+            font-size: 0.85em;
+            color: #b45309;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 12px;
+        }
+
+        .bloco-escala {
+            margin-bottom: 18px;
+        }
+
+        .bloco-escala:last-child {
+            margin-bottom: 0;
+        }
+
+        .data-escala-titulo {
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 8px;
+            font-size: 1.02em;
+        }
+
+        .historico-item {
+            padding: 10px 12px;
+            background: #f1f5f9;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .historico-data {
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 0.9em;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .historico-linha {
+            font-size: 0.85em;
+            color: #334155;
+        }
+
+        .revisao-linha {
+            align-items: center;
+        }
+
+        .revisao-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .btn-alterar {
+            width: auto;
+            margin-bottom: 0;
+            margin-left: 12px;
+            padding: 8px 14px;
+            font-size: 0.85em;
+            white-space: nowrap;
+        }
+
+        /* Modal customizado (substitui alert()/confirm() nativos, que podem
+           ser bloqueados em alguns ambientes de visualização) */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.55);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal-caixa {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+
+        .modal-caixa p {
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        .modal-botoes {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-botoes button {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gerador de Escalas</h1>
+
+    <!-- TELA 1: SELEÇÃO DA PASTORAL -->
+    <div id="telaPastoral" class="tela ativa">
+        <div class="card">
+            <h2>1. Selecione sua pastoral</h2>
+            <label for="pastoralSelect">Pastoral:</label>
+            <select id="pastoralSelect">
+                <option value="liturgia">Liturgia</option>
+                <option value="mesce">MESCE</option>
+            </select>
+            <button onclick="selecionarPastoral()">Continuar</button>
+        </div>
+    </div>
+
+    <!-- TELA 2A: PRIMEIRA VEZ - CADASTRAR LISTA DE PESSOAS -->
+    <div id="telaPrimeiraVez" class="tela">
+        <button class="btn-link" onclick="voltarParaPastoral()">&larr; Trocar de pastoral</button>
+        <div class="card">
+            <h2 id="tituloPastoralPrimeiraVez">2. Cadastrar Pessoas</h2>
+            <p class="subtitulo">Os cargos desta pastoral já são fixos: <strong id="cargosFixosPrimeiraVez"></strong></p>
+            <div id="notaComentaristaPrimeiraVez" class="nota-comentarista" style="display:none;">
+                Nem todo mundo sabe fazer o <strong>Comentário</strong>? Adicione um asterisco (*) logo após o nome de quem pode exercer esse cargo. Ex: <em>Maria*, João, Pedro*</em>
+            </div>
+            <div id="notaCasalPrimeiraVez" class="nota-comentarista" style="display:none;">
+                Quer manter um casal sempre junto na escala? Una os dois nomes com um sinal de mais (+). Ex: <em>João+Maria, Pedro, Ana+Carlos</em>
+            </div>
+            <label for="pessoasInputPrimeiraVez">Lista de pessoas disponíveis:</label>
+            <p class="subtitulo">Separe os nomes por vírgula ou linha.</p>
+            <textarea id="pessoasInputPrimeiraVez" rows="5"></textarea>
+            <button onclick="salvarPessoasPrimeiraVez()">Salvar e Gerar Escala</button>
+        </div>
+    </div>
+
+    <!-- TELA 2B: MENU (EDITAR LISTA OU GERAR ESCALA) -->
+    <div id="telaMenu" class="tela">
+        <button class="btn-link" onclick="voltarParaPastoral()">&larr; Trocar de pastoral</button>
+        <div class="card">
+            <h2 id="tituloPastoralMenu">2. O que deseja fazer?</h2>
+            <p class="subtitulo">Cargos: <strong id="cargosFixosMenu"></strong></p>
+            <p class="subtitulo">Próximo sorteio a partir de: <strong id="dataReferenciaMenu"></strong></p>
+            <button onclick="irParaEditarLista()">Editar Lista de Pessoas</button>
+            <button class="btn-secundary" onclick="gerarEscalas()">Gerar Escala</button>
+            <button class="btn-secundary" onclick="irParaTelaPeriodo()">Gerar Escalas por Período</button>
+            <button class="btn-secundary" onclick="resetarDataReferencia()">Redefinir Data para Hoje</button>
+        </div>
+    </div>
+
+    <!-- TELA 2D: DEFINIR PERÍODO (DATA DE INÍCIO E FIM) PARA GERAÇÃO EM LOTE -->
+    <div id="telaPeriodo" class="tela">
+        <button class="btn-link" onclick="mostrarTela('telaMenu')">&larr; Voltar</button>
+        <div class="card">
+            <h2>Gerar Escalas por Período</h2>
+            <p class="subtitulo">O sistema vai gerar todas as escalas desta pastoral entre as duas datas escolhidas (incluindo os dois dias).</p>
+            <label for="dataInicioPeriodo">Data de início:</label>
+            <input type="date" id="dataInicioPeriodo">
+            <label for="dataFimPeriodo">Data de fim:</label>
+            <input type="date" id="dataFimPeriodo">
+            <button onclick="confirmarPeriodoEGerar()">Gerar Escalas do Período</button>
+        </div>
+    </div>
+
+    <!-- TELA 2C: EDITAR LISTA DE PESSOAS (JÁ EXISTENTE) -->
+    <div id="telaEditarLista" class="tela">
+        <button class="btn-link" onclick="mostrarTela('telaMenu')">&larr; Voltar</button>
+        <div class="card">
+            <h2>Editar Lista de Pessoas</h2>
+            <div id="notaComentaristaEditar" class="nota-comentarista" style="display:none;">
+                Nem todo mundo sabe fazer o <strong>Comentário</strong>? Adicione um asterisco (*) logo após o nome de quem pode exercer esse cargo. Ex: <em>Maria*, João, Pedro*</em>
+            </div>
+            <div id="notaCasalEditar" class="nota-comentarista" style="display:none;">
+                Quer manter um casal sempre junto na escala? Una os dois nomes com um sinal de mais (+). Ex: <em>João+Maria, Pedro, Ana+Carlos</em>
+            </div>
+            <p class="subtitulo">Separe os nomes por vírgula ou linha.</p>
+            <textarea id="pessoasInputEditar" rows="5"></textarea>
+            <button onclick="salvarPessoasEditar()">Salvar Alterações</button>
+        </div>
+    </div>
+
+    <!-- TELA 3: REVISAR/EDITAR CADA ESCALA ANTES DE SALVAR NO HISTÓRICO -->
+    <div id="telaRevisao" class="tela">
+        <div class="card">
+            <h2 id="revisaoTitulo">Revisar Escala</h2>
+            <p class="subtitulo">Confira os nomes sorteados. Use "Alterar" para trocar alguém pela próxima pessoa disponível na fila de prioridade.</p>
+            <div id="revisaoCamposContainer"></div>
+            <button onclick="salvarEscalaRevisada()">Salvar e Continuar</button>
+        </div>
+    </div>
+
+    <!-- TELA 4: ESCALA(S) SALVA(S) -->
+    <div id="telaEscala" class="tela">
+        <button class="btn-link" onclick="mostrarTela('telaMenu')">&larr; Voltar ao menu</button>
+        <div class="card">
+            <h2>3. Escala Atual</h2>
+            <div id="escalaResultado">Nenhuma escala gerada ainda.</div>
+            <button onclick="gerarEscalas()">Gerar Nova Escala</button>
+        </div>
+
+        <div class="card">
+            <h2>Histórico de Escalas (últimas 10)</h2>
+            <div id="historicoContainer">Nenhum histórico encontrado para esta pastoral.</div>
+            <br>
+            <button class="btn-secundary" onclick="limparHistorico()">Limpar Histórico Desta Pastoral</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CUSTOMIZADO (avisos e confirmações) -->
+<div id="modalOverlay" class="modal-overlay">
+    <div class="modal-caixa">
+        <p id="modalMensagem"></p>
+        <div class="modal-botoes">
+            <button id="modalBtnCancelar" class="btn-secundary" onclick="fecharModal()">Cancelar</button>
+            <button id="modalBtnConfirmar">OK</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Configurações e estruturas das pastorais (cargos, pessoas, comentaristas e a data de
+    // referência ficam salvos no localStorage)
+    const dadosPadrao = {
+        liturgia: {
+            cargos: ["Comentário", "1ª Leitura", "2ª Leitura", "Preces"],
+            pessoas: [],
+            comentaristas: [],
+            casais: [],
+            historico: [],
+            dataReferencia: null
+        },
+        mesce: {
+            cargos: ["1°", "2°", "3°", "4°"],
+            pessoas: [],
+            comentaristas: [],
+            casais: [],
+            historico: [],
+            dataReferencia: null
+        }
+    };
+
+    // Pastorais em que a marcação de casais (para tentar mantê-los juntos na escala) está disponível
+    const pastoraisComCasais = ['mesce'];
+
+    // Regras de geração automática: em quais dias da semana e turnos cada
+    // pastoral gera escalas, e quais cargos usar em cada uma (0=domingo,
+    // 2=terça, 4=quinta). Isso não fica salvo no localStorage - é fixo no código.
+    const regrasGeracao = {
+        liturgia: [
+            { diaSemana: 0, turno: 'Manhã' },
+            { diaSemana: 0, turno: 'Noite' },
+            { diaSemana: 2, cargos: ['Comentário', 'Leitura'] },
+            { diaSemana: 4, cargos: ['Comentário', 'Leitura'] }
+        ],
+        mesce: [
+            { diaSemana: 6, cargos: ['1°', '2°'] },
+            { diaSemana: 0, turno: 'Manhã' },
+            { diaSemana: 0, turno: 'Noite' },
+            { diaSemana: 2, cargos: ['1°', '2°', '3°'] },
+            { diaSemana: 4, cargos: ['1°', '2°', '3°'] }
+        ]
+    };
+
+    const nomesDias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+    let pastoralAtualId = null;
+
+    // Estado do lote de escalas sendo gerado/revisado (não persistido - existe só durante a geração)
+    let loteAtual = null;
+
+    // ===================== MODAL (aviso e confirmação) =====================
+    function fecharModal() {
+        document.getElementById('modalOverlay').style.display = 'none';
+    }
+
+    // Mostra um aviso simples com apenas um botão "OK"
+    function mostrarAviso(mensagem) {
+        document.getElementById('modalMensagem').innerText = mensagem;
+        const btnCancelar = document.getElementById('modalBtnCancelar');
+        const btnConfirmar = document.getElementById('modalBtnConfirmar');
+        btnCancelar.style.display = 'none';
+        btnConfirmar.innerText = 'OK';
+        btnConfirmar.onclick = fecharModal;
+        document.getElementById('modalOverlay').style.display = 'flex';
+    }
+
+    // Mostra uma pergunta com "Cancelar" e "Confirmar"; aoConfirmar() só roda se o usuário confirmar
+    function mostrarConfirmacao(mensagem, aoConfirmar) {
+        document.getElementById('modalMensagem').innerText = mensagem;
+        const btnCancelar = document.getElementById('modalBtnCancelar');
+        const btnConfirmar = document.getElementById('modalBtnConfirmar');
+        btnCancelar.style.display = 'block';
+        btnCancelar.onclick = fecharModal;
+        btnConfirmar.innerText = 'Confirmar';
+        btnConfirmar.onclick = function () {
+            fecharModal();
+            aoConfirmar();
+        };
+        document.getElementById('modalOverlay').style.display = 'flex';
+    }
+
+    // ===================== DADOS =====================
+    function obterDados() {
+        const dadosSalvos = localStorage.getItem('appEscalasData');
+        return dadosSalvos ? JSON.parse(dadosSalvos) : dadosPadrao;
+    }
+
+    function salvarDados(dados) {
+        localStorage.setItem('appEscalasData', JSON.stringify(dados));
+    }
+
+    function nomeDaPastoral(pastoralId) {
+        const select = document.getElementById('pastoralSelect');
+        const option = Array.from(select.options).find(o => o.value === pastoralId);
+        return option ? option.text : pastoralId;
+    }
+
+    // Uma pastoral "tem" o cargo de Comentário se ele aparece nos cargos fixos dela
+    function pastoralTemComentario(pastoralDados) {
+        return pastoralDados.cargos.includes('Comentário');
+    }
+
+    // Uma pastoral "tem" a opção de marcar casais se estiver na lista de configuração
+    function pastoralTemCasais(pastoralId) {
+        return pastoraisComCasais.includes(pastoralId);
+    }
+
+    // Converte o texto digitado em três listas:
+    // - pessoas: todos os nomes limpos (sem * nem +)
+    // - comentaristas: nomes marcados com * (aptos a fazer o Comentário)
+    // - casais: grupos de nomes que devem ficar juntos na escala, marcados com + entre eles (ex: "João+Maria")
+    function interpretarListaPessoas(texto) {
+        const entradasBrutas = texto.split(/[\n,]+/)
+            .map(n => n.trim())
+            .filter(n => n.length > 0);
+
+        const pessoas = [];
+        const comentaristas = [];
+        const casais = [];
+
+        function limparNome(nome) {
+            if (nome.endsWith('*')) {
+                const nomeLimpo = nome.slice(0, -1).trim();
+                if (nomeLimpo.length > 0) {
+                    comentaristas.push(nomeLimpo);
+                }
+                return nomeLimpo;
+            }
+            return nome;
+        }
+
+        entradasBrutas.forEach(entrada => {
+            if (entrada.includes('+')) {
+                const nomesDoGrupo = entrada.split('+')
+                    .map(n => limparNome(n.trim()))
+                    .filter(n => n.length > 0);
+
+                if (nomesDoGrupo.length > 1) {
+                    nomesDoGrupo.forEach(n => pessoas.push(n));
+                    casais.push(nomesDoGrupo);
+                } else if (nomesDoGrupo.length === 1) {
+                    pessoas.push(nomesDoGrupo[0]);
+                }
+            } else {
+                const nomeLimpo = limparNome(entrada);
+                if (nomeLimpo.length > 0) {
+                    pessoas.push(nomeLimpo);
+                }
+            }
+        });
+
+        return { pessoas, comentaristas, casais };
+    }
+
+    // Reconstrói o texto do textarea a partir das listas salvas: reagrupa casais com "+" e
+    // marca comentaristas com "*", preservando a ordem original de cadastro
+    function montarTextoListaPessoas(pessoas, comentaristas, casais) {
+        casais = casais || [];
+        const nomeParaGrupo = {};
+        casais.forEach(grupo => {
+            grupo.forEach(nome => { nomeParaGrupo[nome] = grupo; });
+        });
+
+        const jaExibidos = new Set();
+        const partes = [];
+
+        pessoas.forEach(nome => {
+            if (jaExibidos.has(nome)) return;
+
+            const grupo = nomeParaGrupo[nome];
+            if (grupo) {
+                const textoGrupo = grupo
+                    .map(n => (comentaristas.includes(n) ? `${n}*` : n))
+                    .join('+');
+                partes.push(textoGrupo);
+                grupo.forEach(n => jaExibidos.add(n));
+            } else {
+                partes.push(comentaristas.includes(nome) ? `${nome}*` : nome);
+                jaExibidos.add(nome);
+            }
+        });
+
+        return partes.join(', ');
+    }
+
+    // ===================== NAVEGAÇÃO =====================
+    function mostrarTela(idTela) {
+        document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
+        document.getElementById(idTela).classList.add('ativa');
+    }
+
+    function voltarParaPastoral() {
+        pastoralAtualId = null;
+        loteAtual = null;
+        mostrarTela('telaPastoral');
+    }
+
+    // Deixa a Tela 2B (menu) pronta com os textos certos, mesmo que o
+    // usuário chegue até ela navegando "para trás" a partir de outra tela.
+    function prepararMenu() {
+        const dados = obterDados();
+        const pastoralDados = dados[pastoralAtualId];
+        document.getElementById('tituloPastoralMenu').innerText = `2. O que deseja fazer? - ${nomeDaPastoral(pastoralAtualId)}`;
+        document.getElementById('cargosFixosMenu').innerText = pastoralDados.cargos.join(' • ');
+        document.getElementById('dataReferenciaMenu').innerText = formatarDataParaExibicao(pastoralDados.dataReferencia);
+    }
+
+    // Reseta a data de referência da pastoral atual: o próximo sorteio volta a considerar
+    // a semana de hoje em diante, em vez de continuar de onde o último lote parou.
+    function resetarDataReferencia() {
+        const dados = obterDados();
+        dados[pastoralAtualId].dataReferencia = null;
+        salvarDados(dados);
+        prepararMenu();
+        mostrarAviso('Data de referência redefinida! O próximo sorteio vai considerar a partir de hoje.');
+    }
+
+    // Formata uma data (ISO ou null, quando ainda não há referência salva - usa hoje) como dd/mm/aaaa
+    function formatarDataParaExibicao(dataISO) {
+        let data;
+        if (dataISO) {
+            data = new Date(dataISO + 'T00:00:00');
+        } else {
+            data = new Date();
+            data.setHours(0, 0, 0, 0);
+        }
+        const dia = String(data.getDate()).padStart(2, '0');
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const ano = data.getFullYear();
+        return `${dia}/${mes}/${ano}`;
+    }
+
+    // TELA 1 -> decide entre Tela 2A (primeira vez) ou Tela 2B (menu)
+    function selecionarPastoral() {
+        const pastoral = document.getElementById('pastoralSelect').value;
+        const dados = obterDados();
+
+        if (!dados[pastoral]) {
+            dados[pastoral] = {
+                cargos: (dadosPadrao[pastoral] ? dadosPadrao[pastoral].cargos : []),
+                pessoas: [],
+                comentaristas: [],
+                casais: [],
+                historico: [],
+                dataReferencia: null
+            };
+            salvarDados(dados);
+        }
+
+        pastoralAtualId = pastoral;
+        const pastoralDados = dados[pastoral];
+
+        prepararMenu();
+
+        if (pastoralDados.pessoas.length === 0) {
+            // Primeira vez que esta pastoral é selecionada neste dispositivo
+            document.getElementById('tituloPastoralPrimeiraVez').innerText = `2. Cadastrar Pessoas - ${nomeDaPastoral(pastoral)}`;
+            document.getElementById('cargosFixosPrimeiraVez').innerText = pastoralDados.cargos.join(' • ');
+            document.getElementById('pessoasInputPrimeiraVez').value = '';
+            document.getElementById('notaComentaristaPrimeiraVez').style.display = pastoralTemComentario(pastoralDados) ? 'block' : 'none';
+            document.getElementById('notaCasalPrimeiraVez').style.display = pastoralTemCasais(pastoral) ? 'block' : 'none';
+            mostrarTela('telaPrimeiraVez');
+        } else {
+            mostrarTela('telaMenu');
+        }
+    }
+
+    // TELA 2A: salva lista de pessoas pela primeira vez (interpretando * e +) e já gera as escalas
+    function salvarPessoasPrimeiraVez() {
+        const texto = document.getElementById('pessoasInputPrimeiraVez').value;
+        const dados = obterDados();
+        const { pessoas, comentaristas, casais } = interpretarListaPessoas(texto);
+
+        if (pessoas.length === 0) {
+            mostrarAviso('Adicione pelo menos um nome antes de continuar.');
+            return;
+        }
+
+        dados[pastoralAtualId].pessoas = pessoas;
+        dados[pastoralAtualId].comentaristas = comentaristas;
+        dados[pastoralAtualId].casais = casais;
+        salvarDados(dados);
+        prepararMenu();
+
+        gerarEscalas();
+    }
+
+    // TELA 2B -> TELA 2C
+    function irParaEditarLista() {
+        const dados = obterDados();
+        const pastoralDados = dados[pastoralAtualId];
+        document.getElementById('pessoasInputEditar').value = montarTextoListaPessoas(pastoralDados.pessoas, pastoralDados.comentaristas || [], pastoralDados.casais || []);
+        document.getElementById('notaComentaristaEditar').style.display = pastoralTemComentario(pastoralDados) ? 'block' : 'none';
+        document.getElementById('notaCasalEditar').style.display = pastoralTemCasais(pastoralAtualId) ? 'block' : 'none';
+        mostrarTela('telaEditarLista');
+    }
+
+    // TELA 2C: salva edição da lista já existente (recalculando comentaristas e casais) e volta ao menu
+    function salvarPessoasEditar() {
+        const texto = document.getElementById('pessoasInputEditar').value;
+        const dados = obterDados();
+        const { pessoas, comentaristas, casais } = interpretarListaPessoas(texto);
+
+        dados[pastoralAtualId].pessoas = pessoas;
+        dados[pastoralAtualId].comentaristas = comentaristas;
+        dados[pastoralAtualId].casais = casais;
+
+        salvarDados(dados);
+        prepararMenu();
+        mostrarTela('telaMenu');
+        mostrarAviso('Lista de pessoas atualizada com sucesso!');
+    }
+
+    // ===================== DATAS =====================
+    function formatarDataISO(data) {
+        const ano = data.getFullYear();
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const dia = String(data.getDate()).padStart(2, '0');
+        return `${ano}-${mes}-${dia}`;
+    }
+
+    // Retorna a data (YYYY-MM-DD) do próximo dia da semana informado, a partir de uma data base
+    // (considerando a própria data base como opção válida caso já seja esse dia).
+    function proximaDataParaDiaSemanaAPartir(diaSemanaAlvo, dataBase) {
+        const data = new Date(dataBase);
+        data.setHours(0, 0, 0, 0);
+        while (data.getDay() !== diaSemanaAlvo) {
+            data.setDate(data.getDate() + 1);
+        }
+        return data;
+    }
+
+    // Determina a data-âncora (início da semana de referência) para um novo lote de escalas:
+    // usa a data de referência salva da pastoral, avançando para hoje caso ela já tenha ficado no passado.
+    function obterDataAncora(pastoralAtual) {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        if (!pastoralAtual.dataReferencia) {
+            return hoje;
+        }
+
+        const ancora = new Date(pastoralAtual.dataReferencia + 'T00:00:00');
+        return ancora < hoje ? hoje : ancora;
+    }
+
+    // ===================== GERAÇÃO DE ESCALAS =====================
+
+    // Sorteia os nomes para os cargos de uma regra, respeitando quem participou da escala de
+    // referência anterior (prioridade), quem pode exercer o cargo de Comentário e, quando a
+    // pastoral tiver casais marcados, tentando sempre mantê-los juntos.
+    // Retorna { escala, poolDisponivel } (pool = demais pessoas, em ordem de prioridade, que
+    // ficam de reserva para o botão "Alterar"), ou null caso não seja possível gerar (aviso já é exibido).
+    function sortearEscalaParaRegra(cargosDaRegra, rotuloDia, pastoralDados, referenciaAnterior) {
+        const pessoas = pastoralDados.pessoas;
+        const comentaristas = pastoralDados.comentaristas || [];
+        const casais = pastoralDados.casais || [];
+
+        if (cargosDaRegra.length === 0) {
+            mostrarAviso('Esta pastoral não possui cargos definidos.');
+            return null;
+        }
+
+        if (pessoas.length < cargosDaRegra.length) {
+            mostrarAviso(`Pessoas insuficientes! É necessário pelo menos ${cargosDaRegra.length} pessoas para gerar a escala de ${rotuloDia}.`);
+            return null;
+        }
+
+        const precisaComentario = cargosDaRegra.includes('Comentário');
+        if (precisaComentario && comentaristas.length === 0) {
+            mostrarAviso(`Nenhuma pessoa está marcada como apta a fazer o Comentário (${rotuloDia}). Edite a lista de pessoas e marque com * quem pode exercer esse cargo.`);
+            return null;
+        }
+
+        // Nomes de quem participou da escala de referência anterior
+        const pessoasReferencia = Object.values(referenciaAnterior);
+
+        // Separa candidatos prioritários (que não estavam na escala anterior)
+        let prioridade = pessoas.filter(p => !pessoasReferencia.includes(p));
+        let secundario = pessoas.filter(p => pessoasReferencia.includes(p));
+
+        // Embaralha ambas as listas para sorteio justo
+        prioridade.sort(() => Math.random() - 0.5);
+        secundario.sort(() => Math.random() - 0.5);
+
+        // Fila final, respeitando a hierarquia: quem não participou da última escala vem primeiro
+        const filaElegiveis = [...prioridade, ...secundario];
+        const novaEscala = {};
+
+        if (precisaComentario) {
+            // Pastoral com cargo de Comentário (ex.: Liturgia) - não usa agrupamento de casais
+            const restante = filaElegiveis.slice();
+
+            // O cargo de Comentário só pode ser preenchido por quem está apto para isso;
+            // pega o primeiro da fila (respeitando a prioridade) que seja comentarista
+            const indice = restante.findIndex(p => comentaristas.includes(p));
+            const pessoaComentario = restante.splice(indice, 1)[0];
+            novaEscala['Comentário'] = pessoaComentario;
+
+            // Preenche os demais cargos, na ordem, com quem restou na fila (mantendo a hierarquia de prioridade)
+            for (const cargo of cargosDaRegra) {
+                if (cargo === 'Comentário') continue;
+                novaEscala[cargo] = restante.shift();
+            }
+
+            return { escala: novaEscala, poolDisponivel: restante };
+        }
+
+        // Pastoral sem cargo de Comentário (ex.: MESCE) - tenta manter casais juntos, mesmo que
+        // isso quebre um pouco a ordem estrita de prioridade
+        const nomeParaGrupo = {};
+        casais.forEach(grupo => {
+            grupo.forEach(nome => { nomeParaGrupo[nome] = grupo; });
+        });
+
+        // Monta a fila em "unidades": pessoa sozinha, ou casal inteiro (na posição de prioridade
+        // de quem aparecer primeiro na fila)
+        const jaAgrupados = new Set();
+        const filaDeUnidades = [];
+        filaElegiveis.forEach(pessoa => {
+            if (jaAgrupados.has(pessoa)) return;
+            const grupo = nomeParaGrupo[pessoa];
+            if (grupo) {
+                filaDeUnidades.push(grupo.slice());
+                grupo.forEach(n => jaAgrupados.add(n));
+            } else {
+                filaDeUnidades.push([pessoa]);
+                jaAgrupados.add(pessoa);
+            }
+        });
+
+        let indiceCargo = 0;
+
+        // 1ª passada: preenche com unidades inteiras (mantendo casais juntos), pulando por ora
+        // qualquer casal que não caiba nas vagas restantes
+        for (let i = 0; i < filaDeUnidades.length && indiceCargo < cargosDaRegra.length; i++) {
+            const unidade = filaDeUnidades[i];
+            const vagas = cargosDaRegra.length - indiceCargo;
+            if (unidade.length <= vagas) {
+                unidade.forEach(pessoa => {
+                    novaEscala[cargosDaRegra[indiceCargo]] = pessoa;
+                    indiceCargo++;
+                });
+                filaDeUnidades[i] = null;
+            }
+        }
+
+        // 2ª passada (só se ainda sobrarem vagas): preenche o que faltar, quebrando algum casal
+        // se for realmente inevitável
+        if (indiceCargo < cargosDaRegra.length) {
+            for (let i = 0; i < filaDeUnidades.length && indiceCargo < cargosDaRegra.length; i++) {
+                const unidade = filaDeUnidades[i];
+                if (!unidade) continue;
+                while (unidade.length > 0 && indiceCargo < cargosDaRegra.length) {
+                    novaEscala[cargosDaRegra[indiceCargo]] = unidade.shift();
+                    indiceCargo++;
+                }
+                if (unidade.length === 0) {
+                    filaDeUnidades[i] = null;
+                }
+            }
+        }
+
+        // O que sobrou (não usado) vira o pool disponível para trocas, mantendo a ordem de prioridade
+        const poolDisponivel = [];
+        filaDeUnidades.forEach(unidade => {
+            if (unidade) poolDisponivel.push(...unidade);
+        });
+
+        return { escala: novaEscala, poolDisponivel };
+    }
+
+    // Inicia a geração de um novo lote de escalas para a pastoral atual, a partir da semana de
+    // referência atual (ex.: Liturgia = Domingo Manhã, Domingo Noite, Terça e Quinta da mesma semana)
+    function gerarEscalas() {
+        const dados = obterDados();
+        const pastoralAtual = dados[pastoralAtualId];
+        const regras = regrasGeracao[pastoralAtualId] || [{ diaSemana: 0 }];
+        const ancora = obterDataAncora(pastoralAtual);
+
+        const entradasPendentes = regras.map(regra => ({
+            diaSemana: regra.diaSemana,
+            turno: regra.turno || null,
+            cargos: regra.cargos || pastoralAtual.cargos,
+            data: formatarDataISO(proximaDataParaDiaSemanaAPartir(regra.diaSemana, ancora))
+        }));
+
+        iniciarLote(pastoralAtual, entradasPendentes, 'normal', ancora);
+    }
+
+    // TELA 2B -> TELA 2D
+    function irParaTelaPeriodo() {
+        const hojeISO = formatarDataISO(new Date());
+        const inicioInput = document.getElementById('dataInicioPeriodo');
+        const fimInput = document.getElementById('dataFimPeriodo');
+        inicioInput.min = hojeISO;
+        inicioInput.value = hojeISO;
+        fimInput.min = hojeISO;
+        fimInput.value = '';
+        mostrarTela('telaPeriodo');
+    }
+
+    // TELA 2D: valida as datas escolhidas e gera todas as escalas da pastoral dentro do período
+    function confirmarPeriodoEGerar() {
+        const dataInicioISO = document.getElementById('dataInicioPeriodo').value;
+        const dataFimISO = document.getElementById('dataFimPeriodo').value;
+        const hojeISO = formatarDataISO(new Date());
+
+        if (!dataInicioISO || !dataFimISO) {
+            mostrarAviso('Selecione a data de início e a data de fim do período.');
+            return;
+        }
+
+        if (dataInicioISO < hojeISO) {
+            mostrarAviso('A data de início não pode ser anterior a hoje.');
+            return;
+        }
+
+        if (dataFimISO < dataInicioISO) {
+            mostrarAviso('A data de fim não pode ser anterior à data de início.');
+            return;
+        }
+
+        gerarEscalasPeriodo(dataInicioISO, dataFimISO);
+    }
+
+    // Gera, para cada regra da pastoral, todas as ocorrências do dia da semana correspondente
+    // dentro do período escolhido (início e fim inclusos), e inicia o lote em ordem cronológica
+    function gerarEscalasPeriodo(dataInicioISO, dataFimISO) {
+        const dados = obterDados();
+        const pastoralAtual = dados[pastoralAtualId];
+        const regras = regrasGeracao[pastoralAtualId] || [{ diaSemana: 0 }];
+
+        const inicio = new Date(dataInicioISO + 'T00:00:00');
+        const fim = new Date(dataFimISO + 'T00:00:00');
+
+        const entradasPendentes = [];
+
+        regras.forEach(regra => {
+            let data = new Date(inicio);
+            while (data.getDay() !== regra.diaSemana) {
+                data.setDate(data.getDate() + 1);
+            }
+            while (data <= fim) {
+                entradasPendentes.push({
+                    diaSemana: regra.diaSemana,
+                    turno: regra.turno || null,
+                    cargos: regra.cargos || pastoralAtual.cargos,
+                    data: formatarDataISO(data)
+                });
+                data.setDate(data.getDate() + 7);
+            }
+        });
+
+        if (entradasPendentes.length === 0) {
+            mostrarAviso('Nenhuma data dentro do período escolhido corresponde aos dias de geração desta pastoral.');
+            return;
+        }
+
+        // Ordena cronologicamente; em caso de mesma data (ex.: Domingo Manhã e Noite), mantém a
+        // ordem original das regras (o sort é estável)
+        entradasPendentes.sort((a, b) => (a.data < b.data ? -1 : (a.data > b.data ? 1 : 0)));
+
+        iniciarLote(pastoralAtual, entradasPendentes, 'periodo', fim);
+    }
+
+    // Prepara o estado do lote (usado tanto pela geração semanal normal quanto pela geração por período)
+    // e inicia a primeira etapa de revisão
+    function iniciarLote(pastoralAtual, entradasPendentes, modo, referenciaParaProximaData) {
+        loteAtual = {
+            pastoral: pastoralAtual,
+            entradasPendentes: entradasPendentes,
+            indice: 0,
+            referenciaAnterior: (pastoralAtual.historico && pastoralAtual.historico.length > 0) ? pastoralAtual.historico[0].escala : {},
+            modo: modo,
+            referenciaParaProximaData: referenciaParaProximaData,
+            entradasConfirmadas: []
+        };
+
+        prosseguirLote();
+    }
+
+    // Gera (sorteia) a próxima escala do lote e mostra a tela de revisão, ou finaliza o lote se já acabou
+    function prosseguirLote() {
+        if (loteAtual.indice >= loteAtual.entradasPendentes.length) {
+            finalizarLote();
+            return;
+        }
+
+        const pendente = loteAtual.entradasPendentes[loteAtual.indice];
+        const rotuloDia = nomesDias[pendente.diaSemana] + (pendente.turno ? ` - ${pendente.turno}` : '');
+
+        const resultadoSorteio = sortearEscalaParaRegra(pendente.cargos, rotuloDia, loteAtual.pastoral, loteAtual.referenciaAnterior);
+
+        if (!resultadoSorteio) {
+            // Não foi possível gerar esta escala (aviso já mostrado); cancela o lote inteiro
+            loteAtual = null;
+            mostrarTela('telaMenu');
+            return;
+        }
+
+        loteAtual.entradaAtual = {
+            data: pendente.data,
+            diaSemana: pendente.diaSemana,
+            turno: pendente.turno,
+            escala: resultadoSorteio.escala,
+            poolDisponivel: resultadoSorteio.poolDisponivel
+        };
+
+        exibirTelaRevisao(loteAtual.entradaAtual);
+    }
+
+    // Mostra a tela de revisão com o nome sorteado de cada cargo (somente leitura) e um botão "Alterar"
+    function exibirTelaRevisao(entrada) {
+        document.getElementById('revisaoTitulo').innerText = `Revisar Escala - ${formatarRotuloData(entrada)}`;
+
+        const container = document.getElementById('revisaoCamposContainer');
+        container.innerHTML = '';
+
+        Object.entries(entrada.escala).forEach(([cargo, pessoa]) => {
+            const linha = document.createElement('div');
+            linha.className = 'escalado-item revisao-linha';
+
+            const info = document.createElement('div');
+            info.className = 'revisao-info';
+
+            const spanCargo = document.createElement('span');
+            spanCargo.className = 'cargo-title';
+            spanCargo.textContent = cargo;
+
+            const spanPessoa = document.createElement('span');
+            spanPessoa.textContent = pessoa;
+
+            info.appendChild(spanCargo);
+            info.appendChild(spanPessoa);
+
+            const botaoAlterar = document.createElement('button');
+            botaoAlterar.type = 'button';
+            botaoAlterar.className = 'btn-secundary btn-alterar';
+            botaoAlterar.textContent = 'Alterar';
+            botaoAlterar.onclick = function () {
+                trocarPessoa(cargo);
+            };
+
+            linha.appendChild(info);
+            linha.appendChild(botaoAlterar);
+            container.appendChild(linha);
+        });
+
+        mostrarTela('telaRevisao');
+    }
+
+    // Troca a pessoa de um cargo. Se essa pessoa formar um casal com alguém que também está
+    // presente nesta mesma escala, avisa que o casal será separado e pede confirmação antes de
+    // prosseguir. Essa separação vale só para este sorteio - nos próximos, o casal volta a ser
+    // priorizado normalmente (a lista de casais da pastoral não é alterada).
+    function trocarPessoa(cargo) {
+        const entrada = loteAtual.entradaAtual;
+        const casais = loteAtual.pastoral.casais || [];
+        const pessoaAtual = entrada.escala[cargo];
+
+        const grupo = casais.find(g => g.includes(pessoaAtual));
+        if (grupo) {
+            const nomesNaEscala = Object.values(entrada.escala);
+            const parceiroPresente = grupo.find(nome => nome !== pessoaAtual && nomesNaEscala.includes(nome));
+
+            if (parceiroPresente) {
+                mostrarConfirmacao(
+                    `${pessoaAtual} e ${parceiroPresente} formam um casal e estão juntos nesta escala. Ao alterar, o casal será separado apenas neste sorteio (nos próximos, eles voltam a ser priorizados juntos). Tem certeza que deseja continuar?`,
+                    function () {
+                        executarTrocaPessoa(cargo);
+                    }
+                );
+                return;
+            }
+        }
+
+        executarTrocaPessoa(cargo);
+    }
+
+    // Efetivamente substitui a pessoa do cargo pela próxima disponível na fila de prioridade
+    // (pool da escala atual). Para o cargo de Comentário, só considera pessoas aptas para esse cargo.
+    function executarTrocaPessoa(cargo) {
+        const entrada = loteAtual.entradaAtual;
+        const comentaristas = loteAtual.pastoral.comentaristas || [];
+        const pool = entrada.poolDisponivel;
+
+        const indiceEscolhido = (cargo === 'Comentário')
+            ? pool.findIndex(p => comentaristas.includes(p))
+            : (pool.length > 0 ? 0 : -1);
+
+        if (indiceEscolhido === -1) {
+            mostrarAviso('Não há mais pessoas disponíveis na fila para substituir este cargo.');
+            return;
+        }
+
+        const novaPessoa = pool.splice(indiceEscolhido, 1)[0];
+        const pessoaAnterior = entrada.escala[cargo];
+
+        entrada.escala[cargo] = novaPessoa;
+        pool.push(pessoaAnterior);
+
+        exibirTelaRevisao(entrada);
+    }
+
+    // Salva a escala (já sorteada, com eventuais trocas via "Alterar") no lote atual e segue para a próxima etapa
+    function salvarEscalaRevisada() {
+        const entrada = loteAtual.entradaAtual;
+        loteAtual.entradasConfirmadas.push(entrada);
+        loteAtual.referenciaAnterior = entrada.escala;
+
+        loteAtual.indice++;
+        prosseguirLote();
+    }
+
+    // Encerra o lote: grava todas as escalas confirmadas no histórico da pastoral e define a
+    // próxima data de referência (para que o próximo "Gerar Escala" continue de onde este lote parou).
+    function finalizarLote() {
+        const dados = obterDados();
+        const pastoralAtual = dados[pastoralAtualId];
+        const historicoAnterior = pastoralAtual.historico || [];
+
+        pastoralAtual.historico = [...loteAtual.entradasConfirmadas, ...historicoAnterior].slice(0, 10);
+
+        const proximaReferencia = new Date(loteAtual.referenciaParaProximaData);
+        if (loteAtual.modo === 'periodo') {
+            // No modo período, a próxima geração normal continua no dia seguinte ao fim escolhido
+            proximaReferencia.setDate(proximaReferencia.getDate() + 1);
+        } else {
+            // No modo normal, avança uma semana inteira a partir da âncora usada neste lote
+            proximaReferencia.setDate(proximaReferencia.getDate() + 7);
+        }
+        pastoralAtual.dataReferencia = formatarDataISO(proximaReferencia);
+
+        salvarDados(dados);
+
+        exibirEscalaAtual(loteAtual.entradasConfirmadas);
+        exibirHistorico(pastoralAtual.historico);
+
+        loteAtual = null;
+        mostrarTela('telaEscala');
+    }
+
+    // ===================== EXIBIÇÃO =====================
+
+    // Formata uma entrada de escala (data + dia da semana + turno) de forma compacta
+    function formatarRotuloData(entrada) {
+        const [ano, mes, dia] = entrada.data.split('-').map(Number);
+        const diaFormatado = String(dia).padStart(2, '0');
+        const mesFormatado = String(mes).padStart(2, '0');
+        const nomeDia = nomesDias[entrada.diaSemana];
+        const turno = entrada.turno ? ` - ${entrada.turno}` : '';
+        return `${nomeDia}${turno} (${diaFormatado}/${mesFormatado}/${ano})`;
+    }
+
+    // Mostra o lote de escalas recém-confirmadas na tela final
+    function exibirEscalaAtual(entradas) {
+        let html = '';
+        entradas.forEach(entrada => {
+            html += `<div class="bloco-escala">`;
+            html += `<div class="data-escala-titulo">${formatarRotuloData(entrada)}</div>`;
+            for (const [cargo, pessoa] of Object.entries(entrada.escala)) {
+                html += `
+                    <div class="escalado-item">
+                        <span class="cargo-title">${cargo}</span>
+                        <span>${pessoa}</span>
+                    </div>
+                `;
+            }
+            html += `</div>`;
+        });
+        document.getElementById('escalaResultado').innerHTML = html;
+    }
+
+    // Mostra até 10 escalas do histórico de forma compacta (uma linha por escala)
+    function exibirHistorico(historico) {
+        const container = document.getElementById('historicoContainer');
+
+        if (!historico || historico.length === 0) {
+            container.innerHTML = "Nenhum histórico encontrado para esta pastoral.";
+            return;
+        }
+
+        let html = '';
+        historico.slice(0, 10).forEach(item => {
+            const linhaCargos = Object.entries(item.escala)
+                .map(([cargo, pessoa]) => `${cargo}: ${pessoa}`)
+                .join(' &middot; ');
+
+            html += `
+                <div class="historico-item">
+                    <span class="historico-data">${formatarRotuloData(item)}</span>
+                    <span class="historico-linha">${linhaCargos}</span>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function limparHistorico() {
+        const dados = obterDados();
+        dados[pastoralAtualId].historico = [];
+        salvarDados(dados);
+        document.getElementById('historicoContainer').innerHTML = "Nenhum histórico encontrado para esta pastoral.";
+        mostrarAviso('Histórico desta pastoral limpo com sucesso!');
+    }
+
+    // Inicialização ao carregar a página: sempre começa na tela de seleção de pastoral
+    window.onload = function () {
+        mostrarTela('telaPastoral');
+    };
+</script>
+
+</body>
+</html>
