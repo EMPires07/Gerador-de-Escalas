@@ -250,7 +250,7 @@
                 Nem todo mundo sabe fazer o <strong>Comentário</strong>? Adicione um asterisco (*) logo após o nome de quem pode exercer esse cargo. Ex: <em>Maria*, João, Pedro*</em>
             </div>
             <div id="notaCasalPrimeiraVez" class="nota-comentarista" style="display:none;">
-                Quer manter um casal sempre junto na escala? Una os dois nomes com um sinal de mais (+). Ex: <em>Antônio+Maria, Pedro, Ana+Ocione</em>
+                Quer manter um casal sempre junto na escala? Una os dois nomes com um sinal de mais (+). Ex: <em>João+Maria, Pedro, Ana+Carlos</em>
             </div>
             <label for="pessoasInputPrimeiraVez">Lista de pessoas disponíveis:</label>
             <p class="subtitulo">Separe os nomes por vírgula ou linha.</p>
@@ -379,7 +379,7 @@
             { diaSemana: 4, cargos: ['Comentário', 'Leitura'] }
         ],
         mesce: [
-            { diaSemana: 6, cargos: ['1°', '2°'] },
+            { diaSemana: 6, duplas: true },
             { diaSemana: 0, turno: 'Manhã' },
             { diaSemana: 0, turno: 'Noite' },
             { diaSemana: 2, cargos: ['1°', '2°', '3°'] },
@@ -697,7 +697,7 @@
     // pastoral tiver casais marcados, tentando sempre mantê-los juntos.
     // Retorna { escala, poolDisponivel } (pool = demais pessoas, em ordem de prioridade, que
     // ficam de reserva para o botão "Alterar"), ou null caso não seja possível gerar (aviso já é exibido).
-    function sortearEscalaParaRegra(cargosDaRegra, rotuloDia, pastoralDados, referenciaAnterior) {
+    function sortearEscalaParaRegra(cargosDaRegra, rotuloDia, pastoralDados, referenciaAnterior, modoDuplas) {
         const pessoas = pastoralDados.pessoas;
         const comentaristas = pastoralDados.comentaristas || [];
         const casais = pastoralDados.casais || [];
@@ -777,6 +777,55 @@
 
         let indiceCargo = 0;
 
+        // Modo "duplas": divide os cargos em pares (ex.: 1°+2° = 1ª dupla, 3°+4° = 2ª dupla).
+        // Os casais têm prioridade máxima para ocupar uma dupla inteira; depois, quem estiver
+        // sozinho é combinado em duplas com outras pessoas solteiras para preencher o restante.
+        if (modoDuplas) {
+            const tamanhoDupla = 2;
+            const totalDuplas = Math.ceil(cargosDaRegra.length / tamanhoDupla);
+            const capacidade = [];
+            for (let d = 0; d < totalDuplas; d++) {
+                capacidade.push(Math.min(tamanhoDupla, cargosDaRegra.length - d * tamanhoDupla));
+            }
+            const pessoasPorDupla = capacidade.map(() => []);
+
+            function tentarColocarNaDupla(unidade) {
+                const indiceDupla = capacidade.findIndex(c => c >= unidade.length);
+                if (indiceDupla === -1) return false;
+                pessoasPorDupla[indiceDupla].push(...unidade);
+                capacidade[indiceDupla] -= unidade.length;
+                return true;
+            }
+
+            // 1ª passada: casais primeiro, para garantir que sempre ocupem uma dupla inteira juntos
+            filaDeUnidades.forEach((unidade, i) => {
+                if (unidade && unidade.length === 2 && tentarColocarNaDupla(unidade)) {
+                    filaDeUnidades[i] = null;
+                }
+            });
+
+            // 2ª passada: pessoas sozinhas, preenchendo o que sobrou de vaga em cada dupla
+            filaDeUnidades.forEach((unidade, i) => {
+                if (unidade && unidade.length === 1 && tentarColocarNaDupla(unidade)) {
+                    filaDeUnidades[i] = null;
+                }
+            });
+
+            pessoasPorDupla.forEach(pessoasDaDupla => {
+                pessoasDaDupla.forEach(pessoa => {
+                    novaEscala[cargosDaRegra[indiceCargo]] = pessoa;
+                    indiceCargo++;
+                });
+            });
+
+            const poolDisponivelDuplas = [];
+            filaDeUnidades.forEach(unidade => {
+                if (unidade) poolDisponivelDuplas.push(...unidade);
+            });
+
+            return { escala: novaEscala, poolDisponivel: poolDisponivelDuplas };
+        }
+
         // 1ª passada: preenche com unidades inteiras (mantendo casais juntos), pulando por ora
         // qualquer casal que não caiba nas vagas restantes
         for (let i = 0; i < filaDeUnidades.length && indiceCargo < cargosDaRegra.length; i++) {
@@ -828,6 +877,7 @@
             diaSemana: regra.diaSemana,
             turno: regra.turno || null,
             cargos: regra.cargos || pastoralAtual.cargos,
+            duplas: !!regra.duplas,
             data: formatarDataISO(proximaDataParaDiaSemanaAPartir(regra.diaSemana, ancora))
         }));
 
@@ -892,6 +942,7 @@
                     diaSemana: regra.diaSemana,
                     turno: regra.turno || null,
                     cargos: regra.cargos || pastoralAtual.cargos,
+                    duplas: !!regra.duplas,
                     data: formatarDataISO(data)
                 });
                 data.setDate(data.getDate() + 7);
@@ -936,7 +987,7 @@
         const pendente = loteAtual.entradasPendentes[loteAtual.indice];
         const rotuloDia = nomesDias[pendente.diaSemana] + (pendente.turno ? ` - ${pendente.turno}` : '');
 
-        const resultadoSorteio = sortearEscalaParaRegra(pendente.cargos, rotuloDia, loteAtual.pastoral, loteAtual.referenciaAnterior);
+        const resultadoSorteio = sortearEscalaParaRegra(pendente.cargos, rotuloDia, loteAtual.pastoral, loteAtual.referenciaAnterior, pendente.duplas);
 
         if (!resultadoSorteio) {
             // Não foi possível gerar esta escala (aviso já mostrado); cancela o lote inteiro
